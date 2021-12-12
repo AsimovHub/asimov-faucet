@@ -16,8 +16,8 @@ public interface FaucetClaimDao extends CrudRepository<FaucetClaim, Long> {
     Optional<FaucetClaim> findByExternalUUID(String externalUUID);
 
     List<FaucetClaim> findAllByClaimedAtBetween(LocalDateTime a, LocalDateTime b);
-    List<FaucetClaim> findAllByClaimedAtBetweenAAndReceivingAddress(LocalDateTime a, LocalDateTime b, String receivingAddress);
-    List<FaucetClaim> findAllByClaimedAtBetweenAAndReceivingAddressIsAndClaimedCurrencyIs(LocalDateTime a, LocalDateTime b, String receivingAddress, Currency currency);
+    List<FaucetClaim> findAllByClaimedAtBetweenAndReceivingAddress(LocalDateTime a, LocalDateTime b, String receivingAddress);
+    List<FaucetClaim> findAllByClaimedAtBetweenAndReceivingAddressIsAndClaimedCurrencyIs(LocalDateTime a, LocalDateTime b, String receivingAddress, Currency currency);
 
-    List<FaucetClaim> findAllByReceivingAddressAndCurrency(String receivingAddress, Currency currency);
+    List<FaucetClaim> findAllByReceivingAddressAndClaimedCurrency(String receivingAddress, Currency currency);
 }

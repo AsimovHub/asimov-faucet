@@ -11,7 +11,6 @@ import ac.asimov.faucet.model.BannedWallet;
 import ac.asimov.faucet.model.Currency;
 import ac.asimov.faucet.model.FaucetClaim;
 import org.apache.commons.lang3.StringUtils;
-import org.checkerframework.checker.units.qual.K;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,7 +23,6 @@ import org.web3j.crypto.Credentials;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.time.temporal.TemporalUnit;
 import java.util.List;
 import java.util.Optional;
 
@@ -162,7 +160,7 @@ public class FaucetService {
 
         Integer waitingTime = getWaitingTimeForCurrency(request.getCurrency());
         Duration waitingTimeDuration = Duration.ofSeconds(getWaitingTimeForCurrency(request.getCurrency()));
-        List<FaucetClaim> requestInLastPeriod = faucetClaimDao.findAllByClaimedAtBetweenAAndReceivingAddressIsAndClaimedCurrencyIs(LocalDateTime.now().minusSeconds(waitingTime), LocalDateTime.now(), request.getReceivingAddress(), request.getCurrency());
+        List<FaucetClaim> requestInLastPeriod = faucetClaimDao.findAllByClaimedAtBetweenAndReceivingAddressIsAndClaimedCurrencyIs(LocalDateTime.now().minusSeconds(waitingTime), LocalDateTime.now(), request.getReceivingAddress(), request.getCurrency());
         if (!requestInLastPeriod.isEmpty()) {
             if (requestInLastPeriod.size() > 1) {
                 return new ResponseWrapperDto<>("You only can use the faucet every " + waitingTimeDuration.toString());

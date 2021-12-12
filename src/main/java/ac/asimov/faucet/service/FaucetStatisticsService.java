@@ -5,7 +5,6 @@ import ac.asimov.faucet.dao.BannedWalletDao;
 import ac.asimov.faucet.dao.FaucetClaimDao;
 import ac.asimov.faucet.dto.rest.ResponseWrapperDto;
 import ac.asimov.faucet.dto.rest.WalletInformationDto;
-import ac.asimov.faucet.model.BannedWallet;
 import ac.asimov.faucet.model.Currency;
 import ac.asimov.faucet.model.FaucetClaim;
 import org.apache.commons.lang3.StringUtils;
@@ -55,7 +54,7 @@ public class FaucetStatisticsService {
 
         Currency currency = Currency.MTV;
 
-        List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndCurrency(walletInformation.getAddress(), currency);
+        List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletInformation.getAddress(), currency);
         Integer consecutiveMTV = getConsecutiveDaysOfCurrency(walletInformation.getAddress(), currency, faucetClaims);
         walletInformation.setConsecutiveDaysMTV(consecutiveMTV);
 
@@ -72,7 +71,7 @@ public class FaucetStatisticsService {
             return walletInformation;
         }
         Currency currency = Currency.ISAAC;
-        List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndCurrency(walletInformation.getAddress(), currency);
+        List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletInformation.getAddress(), currency);
         Integer consecutiveISAAC = getConsecutiveDaysOfCurrency(walletInformation.getAddress(), currency, faucetClaims);
         walletInformation.setConsecutiveDaysISAAC(consecutiveISAAC);
 
