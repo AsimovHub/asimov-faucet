@@ -18,6 +18,7 @@ import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -44,8 +45,10 @@ public class FaucetStatisticsService {
         walletInformation = fillMTVInformation(walletInformation);
         walletInformation = fillISAACInformation(walletInformation);
 
-        return new ResponseWrapperDto<>("Not implemented yet");
+        return new ResponseWrapperDto<>(walletInformation);
     }
+
+
 
     private WalletInformationDto fillMTVInformation(WalletInformationDto walletInformation) {
         if (StringUtils.isBlank(walletInformation.getAddress())) {
@@ -55,11 +58,19 @@ public class FaucetStatisticsService {
         Currency currency = Currency.MTV;
 
         List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletInformation.getAddress(), currency);
-        Integer consecutiveMTV = getConsecutiveDaysOfCurrency(walletInformation.getAddress(), currency, faucetClaims);
+        Integer consecutiveMTV = faucetService.getConsecutiveDaysOfCurrency(currency, faucetClaims);
         walletInformation.setConsecutiveDaysMTV(consecutiveMTV);
 
         BigDecimal totalClaimed = faucetClaims.stream().map(FaucetClaim::getReceivingAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         walletInformation.setTotalMTVClaimed(totalClaimed);
+
+        walletInformation.setTotalCountOfMTVClaims(faucetClaims.size());
+
+        // TODO Calculate
+        ResponseWrapperDto<BigDecimal> nextMTVAmount = faucetService.getMTVClaimAmount(consecutiveMTV);
+        if (!nextMTVAmount.hasErrors()) {
+            walletInformation.setNextClaimAmountMTV(nextMTVAmount.getResponse());
+        }
 
         // TODO:
 
@@ -72,11 +83,19 @@ public class FaucetStatisticsService {
         }
         Currency currency = Currency.ISAAC;
         List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletInformation.getAddress(), currency);
-        Integer consecutiveISAAC = getConsecutiveDaysOfCurrency(walletInformation.getAddress(), currency, faucetClaims);
+        Integer consecutiveISAAC = faucetService.getConsecutiveDaysOfCurrency(currency, faucetClaims);
         walletInformation.setConsecutiveDaysISAAC(consecutiveISAAC);
 
         BigDecimal totalClaimed = faucetClaims.stream().map(FaucetClaim::getReceivingAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
         walletInformation.setTotalISAACClaimed(totalClaimed);
+
+        walletInformation.setTotalCountOfISAAClaims(faucetClaims.size());
+
+        // TODO Calculate
+        ResponseWrapperDto<BigDecimal> nextISAACAmount = faucetService.getISAACClaimAmount(consecutiveISAAC);
+        if (!nextISAACAmount.hasErrors()) {
+            walletInformation.setNextClaimAmountISAAC(nextISAACAmount.getResponse());
+        }
 
         // TODO:
 
@@ -84,24 +103,4 @@ public class FaucetStatisticsService {
         return walletInformation;
     }
 
-    private Integer getConsecutiveDaysOfCurrency(String walletAddress, Currency currency, List<FaucetClaim> faucetClaimList) {
-        List<FaucetClaim> consecutiveFaucetClaims = new ArrayList<>();
-
-        faucetClaimList = faucetClaimList.stream().sorted((o1, o2) -> o1.getClaimedAt().compareTo(o2.getClaimedAt())).collect(Collectors.toList());
-        // TODO: Check earliest is at [0]
-        for (FaucetClaim faucetClaim : faucetClaimList) {
-            if (consecutiveFaucetClaims.size() == 0
-                    && Duration.between(faucetClaim.getClaimedAt(), LocalDateTime.now()).minusSeconds(faucetService.getWaitingTimeForCurrency(currency)).getSeconds() <= 0) {
-                consecutiveFaucetClaims.add(faucetClaim);
-            }
-
-            if (consecutiveFaucetClaims.size() > 0
-                    && Duration.between(consecutiveFaucetClaims.get(consecutiveFaucetClaims.size() - 1).getClaimedAt(), faucetClaim.getClaimedAt()).minusSeconds(faucetService.getWaitingTimeForCurrency(currency)).getSeconds() <= 0) {
-                // CHECK LAST 'consecutibeFaucetClaim' WAS LESS THAN EXPIRATION AMOUNT FROM CURRENT 'faucetClaim'
-                consecutiveFaucetClaims.add(faucetClaim);
-            }
-        }
-
-        return consecutiveFaucetClaims.size();
-    }
 }

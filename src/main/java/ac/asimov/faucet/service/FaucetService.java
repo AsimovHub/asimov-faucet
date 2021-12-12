@@ -23,8 +23,11 @@ import org.web3j.crypto.Credentials;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional(propagation = Propagation.REQUIRED)
@@ -43,6 +46,8 @@ public class FaucetService {
 
     @Autowired
     private FaucetMapper mapper;
+
+
 
     private final Integer WAITING_TIME_BETWEEN_MTV_IN_SECONDS = 60 * 60 * 24;
     private final Integer WAITING_TIME_BETWEEN_ISAAC_IN_SECONDS = 60 * 60 * 24;
@@ -70,20 +75,32 @@ public class FaucetService {
         ResponseWrapperDto<Void> validateIpAddressResponse = validateIpAddress(request.getIpAddress());
 
         return switch (request.getCurrency()) {
-            case MTV -> claimMTV(request.getReceivingAddress());
-            case ISAAC -> claimISAAC(request.getReceivingAddress());
+            case MTV -> claimMTV(request.getReceivingAddress(), request.getIpAddress());
+            case ISAAC -> claimISAAC(request.getReceivingAddress(), request.getIpAddress());
         };
     }
 
     private ResponseWrapperDto<Void> validateIpAddress(String ipAddress) {
+        if (StringUtils.equals(ipAddress, "0:0:0:0:0:0:0:1")) {
+            return new ResponseWrapperDto<>();
+        }
 
+        // TAKE A LOOK TO BANNED IP ADDRESS
         // TODO
-
-        return new ResponseWrapperDto<>("Not implemented yet");
+        return new ResponseWrapperDto<>("Not valid for now");
     }
 
-    private ResponseWrapperDto<FaucetClaimResponseDto> claimMTV(String receivingAddress) {
-        BigDecimal receivingAmount = getReceivingAmountForCurrency(Currency.MTV);
+    private ResponseWrapperDto<FaucetClaimResponseDto> claimMTV(String receivingAddress, String ipAddress) {
+        Currency currency = Currency.MTV;
+
+        Integer consecutiveDays = getConsecutiveDaysOfCurrency(receivingAddress, currency);
+        ResponseWrapperDto<BigDecimal> receivingAmountResponse = getReceivingAmountForCurrency(currency, consecutiveDays);
+
+        BigDecimal receivingAmount = CLAIM_MTV_AMOUNT;
+
+        if (!receivingAmountResponse.hasErrors()) {
+            receivingAmount = receivingAmountResponse.getResponse();
+        }
         ResponseWrapperDto<TransactionResponseDto> sendResponse = blockchainGateway.sendMTVFunds(new TransferRequestDto(getFaucetPrivateWalletAccount(), new WalletAccountDto(null, receivingAddress), receivingAmount));
         if (sendResponse.hasErrors()) {
             logger.error(sendResponse.getErrorMessage());
@@ -95,13 +112,11 @@ public class FaucetService {
 
         FaucetClaim faucetClaim = new FaucetClaim();
         faucetClaim.setClaimedAt(LocalDateTime.now());
-        faucetClaim.setClaimedCurrency(Currency.MTV);
+        faucetClaim.setClaimedCurrency(currency);
         faucetClaim.setReceivingAddress(receivingAddress);
         faucetClaim.setReceivingAmount(receivingAmount);
         faucetClaim.setTransactionHash(transactionHash);
-
-        // TODO
-        // faucetClaim.setReceivingIpAddress();
+        faucetClaim.setReceivingIpAddress(ipAddress);
 
         faucetClaim = faucetClaimDao.save(faucetClaim);
 
@@ -109,8 +124,17 @@ public class FaucetService {
         return new ResponseWrapperDto<>(responseDto);
     }
 
-    private ResponseWrapperDto<FaucetClaimResponseDto> claimISAAC(String receivingAddress) {
-        BigDecimal receivingAmount = getReceivingAmountForCurrency(Currency.MTV);
+    private ResponseWrapperDto<FaucetClaimResponseDto> claimISAAC(String receivingAddress, String ipAddress) {
+        Currency currency = Currency.ISAAC;
+        Integer consecutiveDays = getConsecutiveDaysOfCurrency(receivingAddress, currency);
+        ResponseWrapperDto<BigDecimal> receivingAmountResponse = getReceivingAmountForCurrency(currency, consecutiveDays);
+
+        BigDecimal receivingAmount = CLAIM_ISAAC_AMOUNT;
+
+        if (!receivingAmountResponse.hasErrors()) {
+            receivingAmount = receivingAmountResponse.getResponse();
+        }
+
         ResponseWrapperDto<TransactionResponseDto> sendResponse = blockchainGateway.sendISAACTokenFunds(new TransferRequestDto(getFaucetPrivateWalletAccount(), new WalletAccountDto(null, receivingAddress), receivingAmount));
         if (sendResponse.hasErrors()) {
             logger.error(sendResponse.getErrorMessage());
@@ -121,18 +145,41 @@ public class FaucetService {
 
         FaucetClaim faucetClaim = new FaucetClaim();
         faucetClaim.setClaimedAt(LocalDateTime.now());
-        faucetClaim.setClaimedCurrency(Currency.ISAAC);
+        faucetClaim.setClaimedCurrency(currency);
         faucetClaim.setReceivingAddress(receivingAddress);
         faucetClaim.setReceivingAmount(receivingAmount);
         faucetClaim.setTransactionHash(transactionHash);
-
-        // TODO
-        // faucetClaim.setReceivingIpAddress();
+        faucetClaim.setReceivingIpAddress(ipAddress);
 
         faucetClaim = faucetClaimDao.save(faucetClaim);
 
         FaucetClaimResponseDto responseDto = mapper.mapFaucetClaimToFaucetClaimResponseDto(faucetClaim);
         return new ResponseWrapperDto<>(responseDto);
+    }
+
+    public Integer getConsecutiveDaysOfCurrency(String walletAddress, Currency currency) {
+        List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletAddress, currency);
+        Integer consecutiveISAAC = getConsecutiveDaysOfCurrency(currency, faucetClaims);
+        return consecutiveISAAC;
+    }
+
+    public Integer getConsecutiveDaysOfCurrency(Currency currency, List<FaucetClaim> faucetClaimList) {
+        List<FaucetClaim> consecutiveFaucetClaims = new ArrayList<>();
+
+        faucetClaimList = faucetClaimList.stream().sorted((o1, o2) -> o2.getClaimedAt().compareTo(o1.getClaimedAt())).collect(Collectors.toList());
+        // TODO: Check earliest is at [0]
+        for (FaucetClaim faucetClaim : faucetClaimList) {
+            if (consecutiveFaucetClaims.size() == 0
+                    && Duration.between(faucetClaim.getClaimedAt(), LocalDateTime.now()).minusSeconds(getWaitingTimeForCurrency(currency)).getSeconds() <= Duration.ofHours(24).getSeconds()) {
+                consecutiveFaucetClaims.add(faucetClaim);
+             } else if (consecutiveFaucetClaims.size() > 0
+                    && Duration.between(faucetClaim.getClaimedAt(), consecutiveFaucetClaims.get(consecutiveFaucetClaims.size() - 1).getClaimedAt()).minusSeconds(getWaitingTimeForCurrency(currency)).getSeconds() <= Duration.ofHours(24).getSeconds()) {
+                // CHECK LAST 'consecutibeFaucetClaim' WAS LESS THAN EXPIRATION AMOUNT FROM CURRENT 'faucetClaim'
+                consecutiveFaucetClaims.add(faucetClaim);
+            }
+        }
+
+        return consecutiveFaucetClaims.size();
     }
 
     private ResponseWrapperDto<Void> validateClaimFaucetRequest(FaucetClaimRequestDto request) {
@@ -163,22 +210,46 @@ public class FaucetService {
         List<FaucetClaim> requestInLastPeriod = faucetClaimDao.findAllByClaimedAtBetweenAndReceivingAddressIsAndClaimedCurrencyIs(LocalDateTime.now().minusSeconds(waitingTime), LocalDateTime.now(), request.getReceivingAddress(), request.getCurrency());
         if (!requestInLastPeriod.isEmpty()) {
             if (requestInLastPeriod.size() > 1) {
-                return new ResponseWrapperDto<>("You only can use the faucet every " + waitingTimeDuration.toString());
+                return new ResponseWrapperDto<>("You can only use the faucet every " + durationToString(waitingTimeDuration));
             } else {
-                Duration leftWaitingTime = Duration.between(requestInLastPeriod.get(0).getClaimedAt(), LocalDateTime.now());
-                String leftWaitingTimeString = leftWaitingTime.toString();
-                return new ResponseWrapperDto<>("You only can use the faucet every " + waitingTimeDuration.toString() + "\nTry again in " + leftWaitingTimeString );
+                Duration leftWaitingTime = Duration.between(LocalDateTime.now(), requestInLastPeriod.get(0).getClaimedAt().plusSeconds(waitingTime));
+                String leftWaitingTimeString = durationToString(leftWaitingTime);
+                return new ResponseWrapperDto<>("You can only use the faucet every " + durationToString(waitingTimeDuration) + "<br />Try again in " + leftWaitingTimeString );
+            }
+        }
+
+        if (request.getCurrency() == Currency.MTV) {
+            List<FaucetClaim> allISAACClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(request.getReceivingAddress(), Currency.ISAAC);
+            if (allISAACClaims.size() < 5) {
+                return new ResponseWrapperDto<>("To prevent spam you need a total count of 5 ISAAC claims to be able to claim MTV");
             }
         }
 
         return new ResponseWrapperDto<>();
     }
 
+    private String durationToString(Duration duration) {
+        long effectiveTotalSecs = duration.getSeconds();
+        if (duration.getSeconds() < 0 && duration.getNano() > 0) {
+            effectiveTotalSecs++;
+        }
+
+        final int MINUTES_PER_HOUR = 60;
+        final int SECONDS_PER_MINUTE = 60;
+        final int SECONDS_PER_HOUR = SECONDS_PER_MINUTE * MINUTES_PER_HOUR;
+
+        long hours = effectiveTotalSecs / SECONDS_PER_HOUR;
+        int minutes = (int) ((effectiveTotalSecs % SECONDS_PER_HOUR) / SECONDS_PER_MINUTE);
+        int secs = (int) (effectiveTotalSecs % SECONDS_PER_MINUTE);
+        return (hours != 0 ? hours + " hours " : "") + (minutes != 0 ? minutes + " minutes " : "") + (secs != 0 ? secs + " secs " : "");
+    }
+
     private ResponseWrapperDto<Void> validateCaptcha(String captchaCode) {
-
-        // TODO:
-
-        return new ResponseWrapperDto<>("Not implemented yet");
+        if (StringUtils.equals(captchaCode, "itsvalidnow")) {
+            return new ResponseWrapperDto<>();
+        } else {
+            return new ResponseWrapperDto<>("Invalid captcha code");
+        }
     }
 
     public Integer getWaitingTimeForCurrency(Currency currency) {
@@ -188,11 +259,27 @@ public class FaucetService {
         };
     }
 
-    private BigDecimal getReceivingAmountForCurrency(Currency currency) {
+    public ResponseWrapperDto<BigDecimal> getReceivingAmountForCurrency(Currency currency, int consecutiveDays) {
         return switch (currency) {
-            case MTV -> CLAIM_MTV_AMOUNT;
-            case ISAAC -> CLAIM_ISAAC_AMOUNT;
+            case MTV -> getMTVClaimAmount(consecutiveDays);
+            case ISAAC -> getISAACClaimAmount(consecutiveDays);
         };
+    }
+
+    public ResponseWrapperDto<BigDecimal> getMTVClaimAmount(int consecutiveDays) {
+        // Currently no more than the reward on the seventh day
+        if (consecutiveDays > 6) {
+            consecutiveDays = 6;
+        }
+        return new ResponseWrapperDto<>(BigDecimal.valueOf(consecutiveDays + 1).multiply(CLAIM_MTV_AMOUNT));
+    }
+
+    public ResponseWrapperDto<BigDecimal> getISAACClaimAmount(int consecutiveDays) {
+        // Currently no more than the reward on the seventh day
+        if (consecutiveDays > 6) {
+            consecutiveDays = 6;
+        }
+        return new ResponseWrapperDto<>(BigDecimal.valueOf(consecutiveDays + 1).multiply(CLAIM_ISAAC_AMOUNT));
     }
 
     private WalletAccountDto getFaucetPrivateWalletAccount() {

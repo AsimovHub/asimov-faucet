@@ -6,11 +6,17 @@ public class WalletInformationDto {
 
     private String address;
 
+    private BigDecimal totalMTVClaimed;
+    private BigDecimal totalISAACClaimed;
+
+    private Integer totalCountOfMTVClaims;
+    private Integer totalCountOfISAAClaims;
+
     private Integer consecutiveDaysMTV;
     private Integer consecutiveDaysISAAC;
 
-    private BigDecimal totalMTVClaimed;
-    private BigDecimal totalISAACClaimed;
+    private BigDecimal nextClaimAmountMTV;
+    private BigDecimal nextClaimAmountISAAC;
 
     public WalletInformationDto() {
     }
@@ -25,6 +31,38 @@ public class WalletInformationDto {
 
     public void setAddress(String address) {
         this.address = address;
+    }
+
+    public BigDecimal getTotalMTVClaimed() {
+        return totalMTVClaimed;
+    }
+
+    public void setTotalMTVClaimed(BigDecimal totalMTVClaimed) {
+        this.totalMTVClaimed = totalMTVClaimed;
+    }
+
+    public BigDecimal getTotalISAACClaimed() {
+        return totalISAACClaimed;
+    }
+
+    public void setTotalISAACClaimed(BigDecimal totalISAACClaimed) {
+        this.totalISAACClaimed = totalISAACClaimed;
+    }
+
+    public Integer getTotalCountOfMTVClaims() {
+        return totalCountOfMTVClaims;
+    }
+
+    public void setTotalCountOfMTVClaims(Integer totalCountOfMTVClaims) {
+        this.totalCountOfMTVClaims = totalCountOfMTVClaims;
+    }
+
+    public Integer getTotalCountOfISAAClaims() {
+        return totalCountOfISAAClaims;
+    }
+
+    public void setTotalCountOfISAAClaims(Integer totalCountOfISAAClaims) {
+        this.totalCountOfISAAClaims = totalCountOfISAAClaims;
     }
 
     public Integer getConsecutiveDaysMTV() {
@@ -43,19 +81,19 @@ public class WalletInformationDto {
         this.consecutiveDaysISAAC = consecutiveDaysISAAC;
     }
 
-    public BigDecimal getTotalMTVClaimed() {
-        return totalMTVClaimed;
+    public BigDecimal getNextClaimAmountMTV() {
+        return nextClaimAmountMTV;
     }
 
-    public void setTotalMTVClaimed(BigDecimal totalMTVClaimed) {
-        this.totalMTVClaimed = totalMTVClaimed;
+    public void setNextClaimAmountMTV(BigDecimal nextClaimAmountMTV) {
+        this.nextClaimAmountMTV = nextClaimAmountMTV;
     }
 
-    public BigDecimal getTotalISAACClaimed() {
-        return totalISAACClaimed;
+    public BigDecimal getNextClaimAmountISAAC() {
+        return nextClaimAmountISAAC;
     }
 
-    public void setTotalISAACClaimed(BigDecimal totalISAACClaimed) {
-        this.totalISAACClaimed = totalISAACClaimed;
+    public void setNextClaimAmountISAAC(BigDecimal nextClaimAmountISAAC) {
+        this.nextClaimAmountISAAC = nextClaimAmountISAAC;
     }
 }

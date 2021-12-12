@@ -20,7 +20,7 @@ public class FaucetController {
     private FaucetService service;
 
 
-    @RequestMapping(method = RequestMethod.POST, value = "/faucet/claim/mtv", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    @RequestMapping(method = RequestMethod.POST, value = "/faucet/claim", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseWrapperDto<FaucetClaimResponseDto> claimFaucet(@RequestBody FaucetClaimRequestDto claimRequest, HttpServletRequest request) {
         claimRequest.setIpAddress(request.getRemoteAddr());
         return service.claimFaucet(claimRequest);
