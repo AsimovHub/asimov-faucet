@@ -9,10 +9,10 @@ import ac.asimov.faucet.model.BannedWallet;
 import ac.asimov.faucet.model.Currency;
 import ac.asimov.faucet.model.FaucetClaim;
 import org.apache.commons.lang3.StringUtils;
-import org.jvnet.hk2.annotations.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
