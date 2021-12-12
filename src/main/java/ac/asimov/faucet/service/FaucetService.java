@@ -191,6 +191,9 @@ public class FaucetService {
         if (StringUtils.isBlank(request.getReceivingAddress())) {
             return new ResponseWrapperDto<>("Missing receiving address");
         }
+        if (!blockchainGateway.isWalletValid(new WalletAccountDto(null, request.getReceivingAddress()))) {
+            return new ResponseWrapperDto<>("Your wallet is not valid");
+        }
         Optional<BannedWallet> bannedEntryOptional = bannedWalletDao.findByWalletAddress(request.getReceivingAddress());
         if (bannedEntryOptional.isPresent()) {
             return new ResponseWrapperDto<>("Your address is banned because \"" + bannedEntryOptional.get().getBanReason() + "\"");

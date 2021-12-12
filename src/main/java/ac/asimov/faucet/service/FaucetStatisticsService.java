@@ -1,8 +1,10 @@
 package ac.asimov.faucet.service;
 
 
+import ac.asimov.faucet.blockchain.MultiVACBlockchainGateway;
 import ac.asimov.faucet.dao.BannedWalletDao;
 import ac.asimov.faucet.dao.FaucetClaimDao;
+import ac.asimov.faucet.dto.WalletAccountDto;
 import ac.asimov.faucet.dto.rest.ResponseWrapperDto;
 import ac.asimov.faucet.dto.rest.WalletInformationDto;
 import ac.asimov.faucet.model.Currency;
@@ -38,8 +40,14 @@ public class FaucetStatisticsService {
     @Autowired
     private FaucetService faucetService;
 
+    @Autowired
+    private MultiVACBlockchainGateway blockchainGateway;
+
 
     public ResponseWrapperDto<WalletInformationDto> getWalletInformation(String walletAddress) {
+        if (!blockchainGateway.isWalletValid(new WalletAccountDto(null, walletAddress))) {
+            return new ResponseWrapperDto<>("Your wallet is not valid");
+        }
         WalletInformationDto walletInformation = new WalletInformationDto(walletAddress);
 
         walletInformation = fillMTVInformation(walletInformation);
