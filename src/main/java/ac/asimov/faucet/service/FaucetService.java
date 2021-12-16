@@ -1,9 +1,13 @@
 package ac.asimov.faucet.service;
 
 
+import ac.asimov.captcha.dto.CaptchaValidationRequestDto;
+import ac.asimov.captcha.dto.CaptchaValidationResponseDto;
+import ac.asimov.captcha.helper.CaptchaValidationHelper;
 import ac.asimov.faucet.blockchain.MultiVACBlockchainGateway;
 import ac.asimov.faucet.dao.BannedWalletDao;
 import ac.asimov.faucet.dao.FaucetClaimDao;
+import ac.asimov.faucet.dto.AccountBalanceDto;
 import ac.asimov.faucet.dto.WalletAccountDto;
 import ac.asimov.faucet.dto.rest.*;
 import ac.asimov.faucet.mapper.FaucetMapper;
@@ -21,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.web3j.crypto.Credentials;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -35,7 +40,7 @@ public class FaucetService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Value(value = "${faucetPrivateKey}")
+    @Value(value = "${faucet.privateKey}")
     private String faucetWalletPrivateKey;
 
     @Autowired
@@ -47,13 +52,16 @@ public class FaucetService {
     @Autowired
     private FaucetMapper mapper;
 
+    @Autowired
+    private CaptchaValidationHelper captchaValidationHelper;
+
 
 
     private final Integer WAITING_TIME_BETWEEN_MTV_IN_SECONDS = 60 * 60 * 24;
     private final Integer WAITING_TIME_BETWEEN_ISAAC_IN_SECONDS = 60 * 60 * 24;
 
     private final BigDecimal CLAIM_MTV_AMOUNT = BigDecimal.valueOf(1);
-    private final BigDecimal CLAIM_ISAAC_AMOUNT = BigDecimal.valueOf(10);
+    private final BigDecimal CLAIM_ISAAC_AMOUNT = BigDecimal.valueOf(25);
 
     @Autowired
     private MultiVACBlockchainGateway blockchainGateway;
@@ -67,12 +75,20 @@ public class FaucetService {
             return new ResponseWrapperDto<>(validateRequestResponse.getErrorMessage());
         }
 
-        ResponseWrapperDto<Void> validateCaptchaResponse = validateCaptcha(request.getCaptchaCode());
+        ResponseWrapperDto<Void> validateCaptchaResponse = validateCaptcha(request.getCaptchaCode(), request.getIpAddress());
         if (validateCaptchaResponse.hasErrors()) {
             return new ResponseWrapperDto<>(validateCaptchaResponse.getErrorMessage());
         }
 
+        if (1 > 0) {
+            return new ResponseWrapperDto<>("Test");
+        }
+
         ResponseWrapperDto<Void> validateIpAddressResponse = validateIpAddress(request.getIpAddress());
+
+        if (validateIpAddressResponse.hasErrors()) {
+            return new ResponseWrapperDto<>(validateIpAddressResponse.getErrorMessage());
+        }
 
         return switch (request.getCurrency()) {
             case MTV -> claimMTV(request.getReceivingAddress(), request.getIpAddress());
@@ -101,6 +117,16 @@ public class FaucetService {
         if (!receivingAmountResponse.hasErrors()) {
             receivingAmount = receivingAmountResponse.getResponse();
         }
+
+        ResponseWrapperDto<AccountBalanceDto> faucetBalanceResponse = blockchainGateway.getMTVAccountBalance(getFaucetPublicWalletAccount());
+        if (faucetBalanceResponse.hasErrors()) {
+            return new ResponseWrapperDto<>("Cannot fetch faucet balance");
+        }
+
+        if (faucetBalanceResponse.getResponse().getAmount().compareTo(receivingAmount) < 0) {
+            return new ResponseWrapperDto<>("Faucet balance is too low to send funds");
+        }
+
         ResponseWrapperDto<TransactionResponseDto> sendResponse = blockchainGateway.sendMTVFunds(new TransferRequestDto(getFaucetPrivateWalletAccount(), new WalletAccountDto(null, receivingAddress), receivingAmount));
         if (sendResponse.hasErrors()) {
             logger.error(sendResponse.getErrorMessage());
@@ -133,6 +159,15 @@ public class FaucetService {
 
         if (!receivingAmountResponse.hasErrors()) {
             receivingAmount = receivingAmountResponse.getResponse();
+        }
+
+        ResponseWrapperDto<AccountBalanceDto> faucetBalanceResponse = blockchainGateway.getISAACAccountBalance(getFaucetPublicWalletAccount());
+        if (faucetBalanceResponse.hasErrors()) {
+            return new ResponseWrapperDto<>("Cannot fetch faucet balance");
+        }
+
+        if (faucetBalanceResponse.getResponse().getAmount().compareTo(receivingAmount) < 0) {
+            return new ResponseWrapperDto<>("Faucet balance is too low to send funds");
         }
 
         ResponseWrapperDto<TransactionResponseDto> sendResponse = blockchainGateway.sendISAACTokenFunds(new TransferRequestDto(getFaucetPrivateWalletAccount(), new WalletAccountDto(null, receivingAddress), receivingAmount));
@@ -223,8 +258,8 @@ public class FaucetService {
 
         if (request.getCurrency() == Currency.MTV) {
             List<FaucetClaim> allISAACClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(request.getReceivingAddress(), Currency.ISAAC);
-            if (allISAACClaims.size() < 5) {
-                return new ResponseWrapperDto<>("To prevent spam you need a total count of 5 ISAAC claims to be able to claim MTV");
+            if (allISAACClaims.size() < 3) {
+                return new ResponseWrapperDto<>("To prevent spam you need a total count of 3 ISAAC claims to be able to claim MTV");
             }
         }
 
@@ -247,12 +282,32 @@ public class FaucetService {
         return (hours != 0 ? hours + " hours " : "") + (minutes != 0 ? minutes + " minutes " : "") + (secs != 0 ? secs + " secs " : "");
     }
 
-    private ResponseWrapperDto<Void> validateCaptcha(String captchaCode) {
-        if (StringUtils.equals(captchaCode, "itsvalidnow")) {
-            return new ResponseWrapperDto<>();
-        } else {
-            return new ResponseWrapperDto<>("Invalid captcha code");
+    private ResponseWrapperDto<Void> validateCaptcha(String captchaCode, String ipAddress) {
+
+        // TODO: Add actual captcha validation
+        ResponseWrapperDto<CaptchaValidationResponseDto> captchaValidationResult = captchaValidationHelper.validateCaptcha(captchaCode, ipAddress);
+        if (captchaValidationResult.hasErrors()) {
+            return new ResponseWrapperDto<>(captchaValidationResult.getErrorMessage());
         }
+
+        CaptchaValidationResponseDto validation = captchaValidationResult.getResponse();
+
+        if (!(StringUtils.equals(validation.getHostname(), "asimov.ac") || StringUtils.equals(validation.getHostname(), "localhost"))) {
+            return new ResponseWrapperDto<>("Invalid hostname");
+        }
+
+        if (validation.getChallengeTs().isAfter(LocalDateTime.now().minusMinutes(3))) {
+            return new ResponseWrapperDto<>("Expired captcha code");
+        }
+
+        if (!StringUtils.equals(validation.getAction(), "faucet_action")) {
+            return new ResponseWrapperDto<>("Invalid action");
+        }
+
+        if (validation.getScore() < 0.8) {
+            return new ResponseWrapperDto<>("You were recognized as a bot!");
+        }
+        return new ResponseWrapperDto<>();
     }
 
     public Integer getWaitingTimeForCurrency(Currency currency) {
@@ -270,11 +325,10 @@ public class FaucetService {
     }
 
     public ResponseWrapperDto<BigDecimal> getMTVClaimAmount(int consecutiveDays) {
-        // Currently no more than the reward on the seventh day
         if (consecutiveDays > 6) {
             consecutiveDays = 6;
         }
-        return new ResponseWrapperDto<>(BigDecimal.valueOf(consecutiveDays + 1).multiply(CLAIM_MTV_AMOUNT));
+        return new ResponseWrapperDto<>(CLAIM_MTV_AMOUNT.divide(BigDecimal.valueOf(consecutiveDays + 1), 6, RoundingMode.HALF_UP));
     }
 
     public ResponseWrapperDto<BigDecimal> getISAACClaimAmount(int consecutiveDays) {
@@ -282,7 +336,8 @@ public class FaucetService {
         if (consecutiveDays > 6) {
             consecutiveDays = 6;
         }
-        return new ResponseWrapperDto<>(BigDecimal.valueOf(consecutiveDays + 1).multiply(CLAIM_ISAAC_AMOUNT));
+        double multiplier = (consecutiveDays + 2) * 0.5;
+        return new ResponseWrapperDto<>(CLAIM_ISAAC_AMOUNT.multiply(BigDecimal.valueOf(multiplier)));
     }
 
     private WalletAccountDto getFaucetPrivateWalletAccount() {

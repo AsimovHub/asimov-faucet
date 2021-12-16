@@ -4,8 +4,11 @@ package ac.asimov.faucet.service;
 import ac.asimov.faucet.blockchain.MultiVACBlockchainGateway;
 import ac.asimov.faucet.dao.BannedWalletDao;
 import ac.asimov.faucet.dao.FaucetClaimDao;
+import ac.asimov.faucet.dto.AccountBalanceDto;
 import ac.asimov.faucet.dto.WalletAccountDto;
+import ac.asimov.faucet.dto.rest.FaucetInformationDto;
 import ac.asimov.faucet.dto.rest.ResponseWrapperDto;
+import ac.asimov.faucet.dto.rest.WalletFaucetInformationDto;
 import ac.asimov.faucet.dto.rest.WalletInformationDto;
 import ac.asimov.faucet.model.Currency;
 import ac.asimov.faucet.model.FaucetClaim;
@@ -17,12 +20,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Comparator;
+import java.math.RoundingMode;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -50,65 +49,65 @@ public class FaucetStatisticsService {
         }
         WalletInformationDto walletInformation = new WalletInformationDto(walletAddress);
 
-        walletInformation = fillMTVInformation(walletInformation);
-        walletInformation = fillISAACInformation(walletInformation);
+        walletInformation.setMtvInformation(fillFaucetInformation(walletInformation, Currency.MTV));
+        walletInformation.setIsaacInformation(fillFaucetInformation(walletInformation, Currency.ISAAC));
 
         return new ResponseWrapperDto<>(walletInformation);
     }
 
 
 
-    private WalletInformationDto fillMTVInformation(WalletInformationDto walletInformation) {
+    private WalletFaucetInformationDto fillFaucetInformation(WalletInformationDto walletInformation, Currency currency) {
         if (StringUtils.isBlank(walletInformation.getAddress())) {
-            return walletInformation;
+            return null;
         }
 
-        Currency currency = Currency.MTV;
+        WalletFaucetInformationDto faucetInformation = new WalletFaucetInformationDto();
 
         List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletInformation.getAddress(), currency);
-        Integer consecutiveMTV = faucetService.getConsecutiveDaysOfCurrency(currency, faucetClaims);
-        walletInformation.setConsecutiveDaysMTV(consecutiveMTV);
+        Integer consecutiveDays = faucetService.getConsecutiveDaysOfCurrency(currency, faucetClaims);
+        faucetInformation.setConsecutiveUsedDays(consecutiveDays);
 
         BigDecimal totalClaimed = faucetClaims.stream().map(FaucetClaim::getReceivingAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        walletInformation.setTotalMTVClaimed(totalClaimed);
+        faucetInformation.setTotalClaimedAmount(totalClaimed);
 
-        walletInformation.setTotalCountOfMTVClaims(faucetClaims.size());
+        faucetInformation.setTotalClaims(faucetClaims.size());
 
-        // TODO Calculate
-        ResponseWrapperDto<BigDecimal> nextMTVAmount = faucetService.getMTVClaimAmount(consecutiveMTV);
-        if (!nextMTVAmount.hasErrors()) {
-            walletInformation.setNextClaimAmountMTV(nextMTVAmount.getResponse());
+        ResponseWrapperDto<BigDecimal> nextClaimableAmountResponse = faucetService.getReceivingAmountForCurrency(currency, consecutiveDays);
+        if (!nextClaimableAmountResponse.hasErrors()) {
+            faucetInformation.setNextClaimAmount(nextClaimableAmountResponse.getResponse());
         }
-
+        
         // TODO:
 
-        return walletInformation;
+        return faucetInformation;
     }
 
-    private WalletInformationDto fillISAACInformation(WalletInformationDto walletInformation) {
-        if (StringUtils.isBlank(walletInformation.getAddress())) {
-            return walletInformation;
+    public ResponseWrapperDto<FaucetInformationDto> getFaucetInformation() {
+        try {
+            FaucetInformationDto faucetInformation = new FaucetInformationDto();
+
+            WalletAccountDto publicFaucetWallet = faucetService.getFaucetPublicWalletAccount();
+
+            faucetInformation.setAddress(publicFaucetWallet.getReceiverAddress());
+
+            ResponseWrapperDto<AccountBalanceDto> mtvBalanceResponse = blockchainGateway.getMTVAccountBalance(publicFaucetWallet);
+            if (!mtvBalanceResponse.hasErrors()) {
+                faucetInformation.setMtvPoolBalance(mtvBalanceResponse.getResponse().getAmount().setScale(2, RoundingMode.HALF_UP));
+            }
+
+            ResponseWrapperDto<AccountBalanceDto> isaacBalanceResponse = blockchainGateway.getISAACAccountBalance(publicFaucetWallet);
+            if (!isaacBalanceResponse.hasErrors()) {
+                faucetInformation.setIsaacPoolBalance(isaacBalanceResponse.getResponse().getAmount().setScale(2, RoundingMode.HALF_UP));
+            }
+
+            faucetInformation.setTotalClaims(faucetClaimDao.countClaims());
+
+            // TODO: Maybe add other information
+            return new ResponseWrapperDto<>(faucetInformation);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ResponseWrapperDto<>("Cannot get faucet data");
         }
-        Currency currency = Currency.ISAAC;
-        List<FaucetClaim> faucetClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(walletInformation.getAddress(), currency);
-        Integer consecutiveISAAC = faucetService.getConsecutiveDaysOfCurrency(currency, faucetClaims);
-        walletInformation.setConsecutiveDaysISAAC(consecutiveISAAC);
-
-        BigDecimal totalClaimed = faucetClaims.stream().map(FaucetClaim::getReceivingAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
-        walletInformation.setTotalISAACClaimed(totalClaimed);
-
-        walletInformation.setTotalCountOfISAAClaims(faucetClaims.size());
-
-        // TODO Calculate
-        ResponseWrapperDto<BigDecimal> nextISAACAmount = faucetService.getISAACClaimAmount(consecutiveISAAC);
-        if (!nextISAACAmount.hasErrors()) {
-            walletInformation.setNextClaimAmountISAAC(nextISAACAmount.getResponse());
-        }
-
-        // TODO:
-
-
-        return walletInformation;
     }
-
 }

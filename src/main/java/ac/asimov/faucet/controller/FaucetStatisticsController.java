@@ -1,5 +1,6 @@
 package ac.asimov.faucet.controller;
 
+import ac.asimov.faucet.dto.rest.FaucetInformationDto;
 import ac.asimov.faucet.dto.rest.ResponseWrapperDto;
 import ac.asimov.faucet.dto.rest.WalletInformationDto;
 import ac.asimov.faucet.service.FaucetStatisticsService;
@@ -23,6 +24,11 @@ public class FaucetStatisticsController {
     @RequestMapping(method = RequestMethod.GET, value = "/faucet/wallet/{walletAddress}", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseWrapperDto<WalletInformationDto> getWalletInformation(@PathVariable(name = "walletAddress") String walletAddress) {
         return statisticsService.getWalletInformation(walletAddress);
+    }
+
+    @RequestMapping(method = RequestMethod.GET, value = "/faucet/stats", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
+    public ResponseWrapperDto<FaucetInformationDto> getFaucetInformation() {
+        return statisticsService.getFaucetInformation();
     }
 
     /*

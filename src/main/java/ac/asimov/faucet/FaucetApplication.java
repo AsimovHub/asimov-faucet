@@ -10,10 +10,10 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.util.concurrent.Executor;
 
-@SpringBootApplication(scanBasePackages = {"ac.asimov.faucet", "ac.asimov.faucet.*"})
+@SpringBootApplication(scanBasePackages = {"ac.asimov", "ac.asimov.*"})
 @EnableScheduling
 @EnableAsync
-@ComponentScan({"ac.asimov.faucet", "ac.asimov.faucet.*"})
+@ComponentScan({"ac.asimov", "ac.asimov.*"})
 public class FaucetApplication {
 
 	public static void main(String[] args) {
