@@ -14,6 +14,7 @@ public class FaucetMapper {
         responseDto.setReceivingAddress(faucetClaim.getReceivingAddress());
         responseDto.setReceivingAmount(faucetClaim.getReceivingAmount());
         responseDto.setReceivingCurrency(faucetClaim.getClaimedCurrency());
+        responseDto.setTransactionHash(faucetClaim.getTransactionHash());
 
 
         return responseDto;

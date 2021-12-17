@@ -101,7 +101,20 @@ public class FaucetStatisticsService {
                 faucetInformation.setIsaacPoolBalance(isaacBalanceResponse.getResponse().getAmount().setScale(2, RoundingMode.HALF_UP));
             }
 
-            faucetInformation.setTotalClaims(faucetClaimDao.countClaims());
+
+            List<FaucetClaim> allClaims = faucetClaimDao.findAll();
+            for (FaucetClaim claim : allClaims) {
+                if (claim.getClaimedCurrency() == Currency.MTV) {
+                    faucetInformation.setTotalMTVClaimCount(faucetInformation.getTotalMTVClaimCount() + 1);
+                    faucetInformation.setTotalMTVClaimValue(faucetInformation.getTotalMTVClaimValue().add(claim.getReceivingAmount()));
+                }
+
+                if (claim.getClaimedCurrency() == Currency.ISAAC) {
+                    faucetInformation.setTotalISAACClaimCount(faucetInformation.getTotalISAACClaimCount() + 1);
+                    faucetInformation.setTotalISAACClaimValue(faucetInformation.getTotalISAACClaimValue().add(claim.getReceivingAmount()));
+                }
+
+            }
 
             // TODO: Maybe add other information
             return new ResponseWrapperDto<>(faucetInformation);

@@ -4,15 +4,12 @@ import ac.asimov.captcha.dto.CaptchaValidationRequestDto;
 import ac.asimov.captcha.dto.CaptchaValidationResponseDto;
 import ac.asimov.faucet.dto.rest.ResponseWrapperDto;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
@@ -43,7 +40,7 @@ public class CaptchaValidationHelper {
             }
 
             URI verifyUri = URI.create(String.format(
-                    "https://www.google.com/recaptcha/api/siteverify?secret=%s&response=%s&remoteip=%s",
+                    captchaBaseUrl + "?secret=%s&response=%s&remoteip=%s",
                     captchaSecret, token, ipAddress));
 
             CaptchaValidationResponseDto captchaValidationResponseDto = restTemplate.getForObject(verifyUri, CaptchaValidationResponseDto.class);

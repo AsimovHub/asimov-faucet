@@ -80,10 +80,6 @@ public class FaucetService {
             return new ResponseWrapperDto<>(validateCaptchaResponse.getErrorMessage());
         }
 
-        if (1 > 0) {
-            return new ResponseWrapperDto<>("Test");
-        }
-
         ResponseWrapperDto<Void> validateIpAddressResponse = validateIpAddress(request.getIpAddress());
 
         if (validateIpAddressResponse.hasErrors()) {
@@ -130,6 +126,12 @@ public class FaucetService {
         ResponseWrapperDto<TransactionResponseDto> sendResponse = blockchainGateway.sendMTVFunds(new TransferRequestDto(getFaucetPrivateWalletAccount(), new WalletAccountDto(null, receivingAddress), receivingAmount));
         if (sendResponse.hasErrors()) {
             logger.error(sendResponse.getErrorMessage());
+            if (StringUtils.equals(sendResponse.getErrorMessage(), "Please wait some time to process the current transaction")) {
+                return new ResponseWrapperDto<>("You are too fast!");
+            }
+            if (StringUtils.containsIgnoreCase(sendResponse.getErrorMessage(), "insufficient")) {
+                return new ResponseWrapperDto<>("Faucet has not enought funds");
+            }
             return new ResponseWrapperDto<>("Blockchain error: Cannot send MTV");
         }
 
@@ -173,6 +175,12 @@ public class FaucetService {
         ResponseWrapperDto<TransactionResponseDto> sendResponse = blockchainGateway.sendISAACTokenFunds(new TransferRequestDto(getFaucetPrivateWalletAccount(), new WalletAccountDto(null, receivingAddress), receivingAmount));
         if (sendResponse.hasErrors()) {
             logger.error(sendResponse.getErrorMessage());
+            if (StringUtils.equals(sendResponse.getErrorMessage(), "Please wait some time to process the current transaction")) {
+                return new ResponseWrapperDto<>("You are too fast!");
+            }
+            if (StringUtils.containsIgnoreCase(sendResponse.getErrorMessage(), "insufficient")) {
+                return new ResponseWrapperDto<>("Faucet has not enought funds");
+            }
             return new ResponseWrapperDto<>("Blockchain error: Cannot send ISAAC");
         }
 
@@ -300,7 +308,7 @@ public class FaucetService {
             return new ResponseWrapperDto<>("Expired captcha code");
         }
 
-        if (!StringUtils.equals(validation.getAction(), "faucet_action")) {
+        if (!StringUtils.equals(validation.getAction(), "faucet_claim")) {
             return new ResponseWrapperDto<>("Invalid action");
         }
 
@@ -337,7 +345,7 @@ public class FaucetService {
             consecutiveDays = 6;
         }
         double multiplier = (consecutiveDays + 2) * 0.5;
-        return new ResponseWrapperDto<>(CLAIM_ISAAC_AMOUNT.multiply(BigDecimal.valueOf(multiplier)));
+        return new ResponseWrapperDto<>(CLAIM_ISAAC_AMOUNT.multiply(BigDecimal.valueOf(multiplier)).setScale(6, RoundingMode.HALF_UP));
     }
 
     private WalletAccountDto getFaucetPrivateWalletAccount() {

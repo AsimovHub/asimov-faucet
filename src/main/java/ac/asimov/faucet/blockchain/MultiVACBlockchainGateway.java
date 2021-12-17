@@ -80,9 +80,6 @@ public class MultiVACBlockchainGateway {
     }
 
     public ResponseWrapperDto<TransactionResponseDto> sendISAACTokenFunds(TransferRequestDto request) {
-        if (1 > 0) {
-            return new ResponseWrapperDto<>(new TransactionResponseDto("0x1234567890"));
-        }
         return sendTokenFunds(isaacTokenAddress, request);
     }
 
@@ -108,7 +105,7 @@ public class MultiVACBlockchainGateway {
 
             // Create new Transaction
             // EthBlock lastBlock = web3.ethGetBlockByNumber(DefaultBlockParameterName.LATEST, true).send();
-            BigInteger gasPrice = Convert.toWei("1", Convert.Unit.GWEI).toBigInteger();
+            BigInteger gasPrice = Convert.toWei("5", Convert.Unit.GWEI).toBigInteger();
             // BigInteger gasLimit = lastBlock.getBlock().getGasLimit();
             BigInteger gasLimit = BigInteger.valueOf(100_000);
             logger.info("Current gas limit is: " + gasLimit);
@@ -152,9 +149,6 @@ public class MultiVACBlockchainGateway {
     }
 
     public ResponseWrapperDto<TransactionResponseDto> sendMTVFunds(TransferRequestDto request) {
-        if (1 > 0) {
-            return new ResponseWrapperDto<>(new TransactionResponseDto("0x1234567890"));
-        }
         try {
             Web3j web3 = Web3j.build(new HttpService(rpcUrl));
 
@@ -163,7 +157,7 @@ public class MultiVACBlockchainGateway {
 
             BigInteger gasLimit = BigInteger.valueOf(21000);
 
-            BigInteger gasPrice = Convert.toWei("1", Convert.Unit.GWEI).toBigInteger();
+            BigInteger gasPrice = Convert.toWei("5", Convert.Unit.GWEI).toBigInteger();
             EthGetTransactionCount ethGetTransactionCount = web3.ethGetTransactionCount(credentials.getAddress(), DefaultBlockParameterName.LATEST).send();
             BigInteger nonce =  ethGetTransactionCount.getTransactionCount();
 

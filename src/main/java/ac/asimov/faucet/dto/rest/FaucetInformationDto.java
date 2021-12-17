@@ -9,7 +9,11 @@ public class FaucetInformationDto {
     private BigDecimal mtvPoolBalance;
     private BigDecimal isaacPoolBalance;
 
-    private Long totalClaims;
+    private BigDecimal totalMTVClaimValue = BigDecimal.ZERO;
+    private BigDecimal totalISAACClaimValue = BigDecimal.ZERO;
+
+    private Long totalMTVClaimCount = 0L;
+    private Long totalISAACClaimCount = 0L;
 
     public String getAddress() {
         return address;
@@ -35,11 +39,35 @@ public class FaucetInformationDto {
         this.isaacPoolBalance = isaacPoolBalance;
     }
 
-    public Long getTotalClaims() {
-        return totalClaims;
+    public BigDecimal getTotalMTVClaimValue() {
+        return totalMTVClaimValue;
     }
 
-    public void setTotalClaims(Long totalClaims) {
-        this.totalClaims = totalClaims;
+    public void setTotalMTVClaimValue(BigDecimal totalMTVClaimValue) {
+        this.totalMTVClaimValue = totalMTVClaimValue;
+    }
+
+    public BigDecimal getTotalISAACClaimValue() {
+        return totalISAACClaimValue;
+    }
+
+    public void setTotalISAACClaimValue(BigDecimal totalISAACClaimValue) {
+        this.totalISAACClaimValue = totalISAACClaimValue;
+    }
+
+    public Long getTotalMTVClaimCount() {
+        return totalMTVClaimCount;
+    }
+
+    public void setTotalMTVClaimCount(Long totalMTVClaimCount) {
+        this.totalMTVClaimCount = totalMTVClaimCount;
+    }
+
+    public Long getTotalISAACClaimCount() {
+        return totalISAACClaimCount;
+    }
+
+    public void setTotalISAACClaimCount(Long totalISAACClaimCount) {
+        this.totalISAACClaimCount = totalISAACClaimCount;
     }
 }

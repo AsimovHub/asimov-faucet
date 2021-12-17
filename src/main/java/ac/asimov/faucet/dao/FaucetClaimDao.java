@@ -21,7 +21,4 @@ public interface FaucetClaimDao extends CrudRepository<FaucetClaim, Long> {
     List<FaucetClaim> findAllByClaimedAtBetweenAndReceivingAddressIsAndClaimedCurrencyIs(LocalDateTime a, LocalDateTime b, String receivingAddress, Currency currency);
 
     List<FaucetClaim> findAllByReceivingAddressAndClaimedCurrency(String receivingAddress, Currency currency);
-
-    @Query("SELECT count(*) FROM FaucetClaim")
-    long countClaims();
 }

@@ -11,6 +11,7 @@ public class FaucetClaimResponseDto {
     private BigDecimal receivingAmount;
     private Currency receivingCurrency;
 
+    private String transactionHash;
 
     public String getReceivingAddress() {
         return receivingAddress;
@@ -34,5 +35,13 @@ public class FaucetClaimResponseDto {
 
     public void setReceivingCurrency(Currency receivingCurrency) {
         this.receivingCurrency = receivingCurrency;
+    }
+
+    public String getTransactionHash() {
+        return transactionHash;
+    }
+
+    public void setTransactionHash(String transactionHash) {
+        this.transactionHash = transactionHash;
     }
 }
