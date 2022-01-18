@@ -77,8 +77,6 @@ public class FaucetStatisticsService {
         if (!nextClaimableAmountResponse.hasErrors()) {
             faucetInformation.setNextClaimAmount(nextClaimableAmountResponse.getResponse());
         }
-        
-        // TODO:
 
         return faucetInformation;
     }

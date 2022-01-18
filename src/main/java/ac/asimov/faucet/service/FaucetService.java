@@ -40,6 +40,9 @@ public class FaucetService {
 
     private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    @Value("${spring.profiles.active}")
+    private String activeProfile;
+
     @Value(value = "${faucet.privateKey}")
     private String faucetWalletPrivateKey;
 
@@ -75,15 +78,17 @@ public class FaucetService {
             return new ResponseWrapperDto<>(validateRequestResponse.getErrorMessage());
         }
 
-        ResponseWrapperDto<Void> validateCaptchaResponse = validateCaptcha(request.getCaptchaCode(), request.getIpAddress());
-        if (validateCaptchaResponse.hasErrors()) {
-            return new ResponseWrapperDto<>(validateCaptchaResponse.getErrorMessage());
-        }
+        if (StringUtils.equals(activeProfile, "prod")) {
+            ResponseWrapperDto<Void> validateCaptchaResponse = validateCaptcha(request.getCaptchaCode(), request.getIpAddress());
+            if (validateCaptchaResponse.hasErrors()) {
+                return new ResponseWrapperDto<>(validateCaptchaResponse.getErrorMessage());
+            }
 
-        ResponseWrapperDto<Void> validateIpAddressResponse = validateIpAddress(request.getIpAddress());
+            ResponseWrapperDto<Void> validateIpAddressResponse = validateIpAddress(request.getIpAddress());
 
-        if (validateIpAddressResponse.hasErrors()) {
-            return new ResponseWrapperDto<>(validateIpAddressResponse.getErrorMessage());
+            if (validateIpAddressResponse.hasErrors()) {
+                return new ResponseWrapperDto<>(validateIpAddressResponse.getErrorMessage());
+            }
         }
 
         return switch (request.getCurrency()) {
@@ -93,13 +98,8 @@ public class FaucetService {
     }
 
     private ResponseWrapperDto<Void> validateIpAddress(String ipAddress) {
-        if (StringUtils.equals(ipAddress, "0:0:0:0:0:0:0:1")) {
-            return new ResponseWrapperDto<>();
-        }
-
-        // TAKE A LOOK TO BANNED IP ADDRESS
-        // TODO
-        return new ResponseWrapperDto<>("Not valid for now");
+        // Every ip address is valid for now
+        return new ResponseWrapperDto<>();
     }
 
     private ResponseWrapperDto<FaucetClaimResponseDto> claimMTV(String receivingAddress, String ipAddress) {
@@ -130,7 +130,7 @@ public class FaucetService {
                 return new ResponseWrapperDto<>("You are too fast!");
             }
             if (StringUtils.containsIgnoreCase(sendResponse.getErrorMessage(), "insufficient")) {
-                return new ResponseWrapperDto<>("Faucet has not enought funds");
+                return new ResponseWrapperDto<>("Faucet has not enough funds");
             }
             return new ResponseWrapperDto<>("Blockchain error: Cannot send MTV");
         }
@@ -179,7 +179,7 @@ public class FaucetService {
                 return new ResponseWrapperDto<>("You are too fast!");
             }
             if (StringUtils.containsIgnoreCase(sendResponse.getErrorMessage(), "insufficient")) {
-                return new ResponseWrapperDto<>("Faucet has not enought funds");
+                return new ResponseWrapperDto<>("Faucet has not enough funds");
             }
             return new ResponseWrapperDto<>("Blockchain error: Cannot send ISAAC");
         }
@@ -266,8 +266,8 @@ public class FaucetService {
 
         if (request.getCurrency() == Currency.MTV) {
             List<FaucetClaim> allISAACClaims = faucetClaimDao.findAllByReceivingAddressAndClaimedCurrency(request.getReceivingAddress(), Currency.ISAAC);
-            if (allISAACClaims.size() < 3) {
-                return new ResponseWrapperDto<>("To prevent spam you need a total count of 3 ISAAC claims to be able to claim MTV");
+            if (allISAACClaims.size() < 5) {
+                return new ResponseWrapperDto<>("To prevent spam you need a total count of 5 ISAAC claims to be able to claim MTV");
             }
         }
 
@@ -300,7 +300,7 @@ public class FaucetService {
 
         CaptchaValidationResponseDto validation = captchaValidationResult.getResponse();
 
-        if (!(StringUtils.equals(validation.getHostname(), "asimov.ac") || StringUtils.equals(validation.getHostname(), "localhost"))) {
+        if (!(StringUtils.equals(validation.getHostname(), "asimov.ac"))) {
             return new ResponseWrapperDto<>("Invalid hostname");
         }
 
@@ -312,8 +312,8 @@ public class FaucetService {
             return new ResponseWrapperDto<>("Invalid action");
         }
 
-        if (validation.getScore() < 0.8) {
-            return new ResponseWrapperDto<>("You were recognized as a bot!");
+        if (validation.getScore() < 0.6) {
+            return new ResponseWrapperDto<>("You were recognized as a bot! If you are a human being try reloading your page or disabling VPN/Proxy.");
         }
         return new ResponseWrapperDto<>();
     }
@@ -333,14 +333,20 @@ public class FaucetService {
     }
 
     public ResponseWrapperDto<BigDecimal> getMTVClaimAmount(int consecutiveDays) {
-        if (consecutiveDays > 6) {
-            consecutiveDays = 6;
+
+        if (consecutiveDays == 0) {
+            return new ResponseWrapperDto<>(BigDecimal.valueOf(1));
+        } else if (consecutiveDays == 1) {
+            return new ResponseWrapperDto<>(BigDecimal.valueOf(0.5));
+        } else if (consecutiveDays == 2) {
+            return new ResponseWrapperDto<>(BigDecimal.valueOf(0.25));
+        } else {
+            return new ResponseWrapperDto<>(BigDecimal.valueOf(0.125));
         }
-        return new ResponseWrapperDto<>(CLAIM_MTV_AMOUNT.divide(BigDecimal.valueOf(consecutiveDays + 1), 6, RoundingMode.HALF_UP));
     }
 
     public ResponseWrapperDto<BigDecimal> getISAACClaimAmount(int consecutiveDays) {
-        // Currently no more than the reward on the seventh day
+        // Currently, no more than the reward on the seventh day
         if (consecutiveDays > 6) {
             consecutiveDays = 6;
         }
