@@ -64,25 +64,4 @@ public class CaptchaValidationHelper {
     public RestTemplate prepareRestTemplate() {
         return new RestTemplateBuilder().build();
     }
-
-    public HttpEntity<String> prepareHttpEntity(CaptchaValidationRequestDto captchaRequest) throws Exception {
-        ObjectMapper jsonMapper = new ObjectMapper();
-        captchaRequest.setRemoteIp(null);
-        jsonMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        String jsonString = jsonMapper.writeValueAsString(captchaRequest);
-        return new HttpEntity<>(jsonString, createJsonHeader());
-    }
-
-    public HttpHeaders createJsonHeader() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.add("Accept", "application/json; utf-8");
-        headers.add("Host", "asimov.ac");
-        headers.add("Cache-Control", "no-cache");
-        headers.add("Content-Type", "application/json");
-        headers.add("Connection", "keep-alive");
-        headers.add("Accept-Encoding", "identity");
-        return headers;
-    }
-
-
 }

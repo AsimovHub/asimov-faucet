@@ -38,15 +38,4 @@ class MultiVACBlockchainGatewayTest {
 
 	@Autowired
 	private MultiVACBlockchainGateway blockchainGateway;
-
-	@Ignore
-	@Test
-	public void test() {
-		String ownerAddress = "";
-		// TokenInformationDto tokenInformation = new TokenInformationDto("Test Token", "TEST", BigInteger.valueOf(1_000_001));
-		// ResponseWrapperDto<TokenDeploymentResponseDto> deploymentResult = blockchainGateway.deployToken(ownerAddress, tokenInformation);
-
-		// logger.info("Breakpoint");
-	}
-
 }

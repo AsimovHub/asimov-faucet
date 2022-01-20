@@ -119,7 +119,7 @@ public class FaucetService {
             return new ResponseWrapperDto<>("Cannot fetch faucet balance");
         }
 
-        if (faucetBalanceResponse.getResponse().getAmount().compareTo(receivingAmount) < 0) {
+        if (faucetBalanceResponse.getResponse().getAmount().compareTo(receivingAmount) <= 0) {
             return new ResponseWrapperDto<>("Faucet balance is too low to send funds");
         }
 
@@ -210,14 +210,12 @@ public class FaucetService {
         List<FaucetClaim> consecutiveFaucetClaims = new ArrayList<>();
 
         faucetClaimList = faucetClaimList.stream().sorted((o1, o2) -> o2.getClaimedAt().compareTo(o1.getClaimedAt())).collect(Collectors.toList());
-        // TODO: Check earliest is at [0]
         for (FaucetClaim faucetClaim : faucetClaimList) {
             if (consecutiveFaucetClaims.size() == 0
                     && Duration.between(faucetClaim.getClaimedAt(), LocalDateTime.now()).minusSeconds(getWaitingTimeForCurrency(currency)).getSeconds() <= Duration.ofHours(24).getSeconds()) {
                 consecutiveFaucetClaims.add(faucetClaim);
              } else if (consecutiveFaucetClaims.size() > 0
                     && Duration.between(faucetClaim.getClaimedAt(), consecutiveFaucetClaims.get(consecutiveFaucetClaims.size() - 1).getClaimedAt()).minusSeconds(getWaitingTimeForCurrency(currency)).getSeconds() <= Duration.ofHours(24).getSeconds()) {
-                // CHECK LAST 'consecutibeFaucetClaim' WAS LESS THAN EXPIRATION AMOUNT FROM CURRENT 'faucetClaim'
                 consecutiveFaucetClaims.add(faucetClaim);
             }
         }
@@ -291,8 +289,6 @@ public class FaucetService {
     }
 
     private ResponseWrapperDto<Void> validateCaptcha(String captchaCode, String ipAddress) {
-
-        // TODO: Add actual captcha validation
         ResponseWrapperDto<CaptchaValidationResponseDto> captchaValidationResult = captchaValidationHelper.validateCaptcha(captchaCode, ipAddress);
         if (captchaValidationResult.hasErrors()) {
             return new ResponseWrapperDto<>(captchaValidationResult.getErrorMessage());

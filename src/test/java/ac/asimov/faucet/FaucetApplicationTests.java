@@ -19,10 +19,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 @EnableAutoConfiguration
 @AutoConfigureTestDatabase(connection = EmbeddedDatabaseConnection.H2)
 @ActiveProfiles("test")
-// @AutoConfigureCache
 @AutoConfigureDataJpa
-// @AutoConfigureTestEntityManager
-// @DataJpaTest
 class FaucetApplicationTests {
 	
 	@Test

@@ -113,8 +113,6 @@ public class FaucetStatisticsService {
                 }
 
             }
-
-            // TODO: Maybe add other information
             return new ResponseWrapperDto<>(faucetInformation);
         } catch (Exception e) {
             e.printStackTrace();
