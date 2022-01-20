@@ -26,18 +26,4 @@ public class FaucetController {
         return service.claimFaucet(claimRequest);
     }
 
-
-    /*
-
-    @RequestMapping(method = RequestMethod.POST, value = "/tokendeployer/init", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseWrapperDto<TokenDeploymentResponseDto> addTokenDeploymentRequest(@RequestBody TokenDeploymentRequestDto request) {
-        return service.addTokenDeploymentRequest(request);
-    }
-
-    @RequestMapping(method = RequestMethod.POST, value = "/tokendeployer/trigger", consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseWrapperDto<TokenDeploymentResponseDto> triggerTokenDeployment(@RequestBody TriggerTokenDeploymentRequest request) {
-        return service.triggerTokenDeployment(request);
-    }
-
-     */
 }
